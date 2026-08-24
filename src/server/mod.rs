@@ -180,6 +180,10 @@ pub async fn run(ctx: Context, args: ServerArgs) -> Result<()> {
         Router::new().nest(&state.url_prefix, inner)
     };
 
+    // Health check lives outside the URL prefix so it's always reachable
+    // at a fixed path, regardless of --url-prefix, for container/orchestrator probes.
+    let app = app.route("/health", get(health));
+
     // Capture url_prefix before state is consumed by with_state.
     let url_prefix_for_features = state.url_prefix.clone();
 
@@ -464,6 +468,10 @@ fn api(_state: &AppState) -> Result<Router<Arc<AppState>>> {
         .route("/sync/logout", post(handlers::sync_logout));
 
     Ok(router)
+}
+
+async fn health() -> &'static str {
+    "OK"
 }
 
 async fn serve_static(Path(path): Path<String>) -> impl axum::response::IntoResponse {
